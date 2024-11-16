@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Separator</title>
+    <style>
+        :root {
+    --primary-color: #ff69b4;
+    --secondary-color: #7b68ee;
+    --background-color: #1a1a2e;
+    --success-color: #00fa9a;
+    --error-color: #ff4757;
+}
+
+@keyframes floating {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+    100% { transform: translateY(0px); }
+}
+
+@keyframes glowing {
+    0% { box-shadow: 0 0 5px #ff69b4; }
+    50% { box-shadow: 0 0 20px #ff69b4, 0 0 30px #7b68ee; }
+    100% { box-shadow: 0 0 5px #ff69b4; }
+}
+
+@keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    background: linear-gradient(-45deg, #1a1a2e, #16213e, #1a1a2e, #16213e);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('https://get.wallhere.com/photo/drawing-illustration-anime-anime-girls-cartoon-hair-Tanaka-kun-wa-Itsumo-Kedaruge-Miyano-hand-finger-blond-sketch-mangaka-11890.png') no-repeat center center fixed;
+    background-size: cover;
+    opacity: 0.2;
+    z-index: -1;
+}
+
+.container {
+    max-width: 800px;
+    width: 90%;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: rgba(26, 26, 46, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(123, 104, 238, 0.3);
+    animation: glowing 3s infinite;
+}
+
+h1 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 2rem;
+    font-size: 2.5rem;
+    text-shadow: 0 0 10px var(--primary-color);
+    animation: floating 3s ease-in-out infinite;
+}
+
+.file-input-label {
+    display: inline-block;
+    padding: 1rem;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 15px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.3s ease;
+    transform-style: preserve-3d;
+}
+
+.file-input-label:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+button {
+    padding: 1rem 2rem;
+    background: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
+    color: white;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    transform-style: preserve-3d;
+}
+
+button:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.status {
+    margin: 1rem 0;
+    padding: 1rem;
+    border-radius: 15px;
+    text-align: center;
+    font-weight: bold;
+    backdrop-filter: blur(5px);
+}
+
+.processing {
+    background: rgba(255, 243, 205, 0.2);
+    color: #ffd700;
+}
+
+.completed {
+    background: rgba(0, 250, 154, 0.2);
+    color: var(--success-color);
+}
+
+.error {
+    background: rgba(255, 71, 87, 0.2);
+    color: var(--error-color);
+}
+
+.download-link {
+    display: block;
+    padding: 0.8rem;
+    margin: 0.5rem 0;
+    background: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
+    color: white;
+    text-decoration: none;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+}
+
+.download-link:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 5px 15px rgba(123, 104, 238, 0.4);
+}
+
+#output {
+    margin-top: 2rem;
+    padding: 1rem;
+    border-radius: 15px;
+    background: rgba(26, 26, 46, 0.6);
+    backdrop-filter: blur(5px);
+}
+
+@media (max-width: 600px) {
+    .container {
+        width: 95%;
+        padding: 1rem;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Separator</h1>
+        <form id="upload-form" class="upload-section">
+            <div class="file-input-wrapper">
+                <label class="file-input-label">
+                    Choose audio file
+                    <input type="file" name="file" class="file-input" accept=".mp3,.wav,.ogg,.flac,.m4a" required>
+                </label>
+            </div>
+            <button type="submit">Start Processing</button>
+        </form>
+        <div id="status" class="status"></div>
+        <div id="output">
+            <h3>Download Results:</h3>
+            <div id="downloads"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const status = document.getElementById('status');
+        const output = document.getElementById('output');
+        const downloads = document.getElementById('downloads');
+
+        async function processFile(e) {
+            e.preventDefault();
+            const formData = new FormData(form);
+                
+            // Clear previous results
+            output.style.display = 'none';
+            downloads.innerHTML = '';
+                
+            status.textContent = 'Uploading...';
+            status.className = 'status processing';
+                
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    checkStatus();
+                } else {
+                    status.textContent = `Error: ${data.error || 'Upload failed'}`;
+                    status.className = 'status error';
+                }
+            } catch (error) {
+                status.textContent = 'Upload failed: Network error';
+                status.className = 'status error';
+                console.error('Upload error:', error);
+            }
+        }
+
+        form.addEventListener('submit', processFile);
+
+        async function checkStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+
+                switch(data.status) {
+                    case 'processing':
+                        status.textContent = 'Processing...';
+                        status.className = 'status processing';
+                        setTimeout(checkStatus, 1000);
+                        break;
+                    case 'completed':
+                        status.textContent = 'Processing completed!';
+                        status.className = 'status completed';
+                        output.style.display = 'block';
+                        downloads.innerHTML = data.output_files.map(filename => 
+                            `<a href="/download/${encodeURIComponent(filename)}" 
+                                class="download-link" 
+                                download="${filename}">
+                                Download ${filename}
+                            </a>`
+                        ).join('');
+                        break;
+                    case 'error':
+                        status.textContent = `Error: ${data.error_message || 'Processing failed'}`;
+                        status.className = 'status error';
+                        break;
+                    case 'no_task':
+                        status.textContent = 'No active task';
+                        status.className = 'status';
+                        break;
+                }
+            } catch (error) {
+                status.textContent = 'Status check failed';
+                status.className = 'status error';
+                console.error('Status check error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
